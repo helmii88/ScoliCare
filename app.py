@@ -2,6 +2,19 @@ from flask import Flask, request, jsonify
 import subprocess
 import os
 
+
+const express = require('express')
+const app = express()
+const port = process.env.PORT || 4000;
+
+app.get('/', (req, res) => {
+  res.send('Hello World!')
+})
+
+app.listen(port, (10000) => {
+  console.log(`Example app listening on port ${port}`)
+})
+
 app = Flask(__name__)
 
 @app.route('/upload/', methods=['POST'])
