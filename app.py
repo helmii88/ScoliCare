@@ -3,19 +3,12 @@ import subprocess
 import os
 
 
-const express = require('express')
-const app = express()
-const port = process.env.PORT || 4000;
-
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
-
-app.listen(port, (10000) => {
-  console.log(`Example app listening on port ${port}`)
-})
-
 app = Flask(__name__)
+
+
+@app.route('/')
+def hello_world():
+    return 'Hello World!'
 
 @app.route('/upload/', methods=['POST'])
 def upload_file():
@@ -49,4 +42,6 @@ def upload_file():
             return jsonify({'error': f'Error executing the .exe file: {str(e)}'})
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 4000))
+    app.run(host='0.0.0.0', port=port)
     app.run(debug=True)
