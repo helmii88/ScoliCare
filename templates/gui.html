@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing GUI</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            color: blue;
+        }
+    </style>
+</head>
+<body>
+    <h2>Image Processing GUI</h2>
+    <input type="file" id="file-input" style="display: none;">
+    <button id="capture-btn">Capture</button>
+    <button id="file-btn">Select File</button>
+    <button id="save-btn">Save</button>
+    <button id="reset-btn">Reset</button>
+    <button id="calculate-btn">Calculate</button>
+    <div id="result"></div>
+
+    <script>
+        $(document).ready(function() {
+            // Handle file selection
+            $('#file-btn').click(function() {
+                $('#file-input').click();
+            });
+
+            // Handle form submission and calculate
+            $('#calculate-btn').click(function() {
+                var fileInput = $('#file-input')[0];
+                if (fileInput.files.length === 0) {
+                    alert('Please select a file first.');
+                    return;
+                }
+                
+                var formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                $.ajax({
+                    url: '/upload',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.error) {
+                            $('#result').html('<p style="color: red;">' + response.error + '</p>');
+                        } else {
+                            $('#result').html('<p>Result: ' + response.result + '</p>');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $('#result').html('<p style="color: red;">An error occurred: ' + error + '</p>');
+                    }
+                });
+            });
+
+            // Handle reset
+            $('#reset-btn').click(function() {
+                $('#file-input').val('');
+                $('#result').html('');
+            });
+
+            // Handle save - Implement as needed
+            $('#save-btn').click(function() {
+                alert('Save functionality to be implemented.');
+            });
+
+            // Handle capture - Implement as needed
+            $('#capture-btn').click(function() {
+                alert('Capture functionality to be implemented.');
+            });
+        });
+    </script>
+</body>
+</html>
