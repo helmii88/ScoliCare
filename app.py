@@ -1,48 +1,32 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 import subprocess
 import os
-
 
 app = Flask(__name__)
 
 
-@app.route('/')
-def hello_world():
-    return 'Hello World!'
+@app.route('/process_image', methods=['POST'])
+def process_image():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image provided"}), 400
 
-@app.route('/upload/', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'})
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'})
-
-    # Save the uploaded file temporarily
-    temp_image_path = 'temp_image.jpg'
-    file.save(temp_image_path)
+    image = request.files['image']
+    image_path = os.path.join("uploads", image.filename)
+    image.save(image_path)
 
     try:
-        # Execute the .exe file with the temporary image as an argument
-        cmd = ['C:/Users/mido/apii/Exe file/Main/Main.exe', temp_image_path]
-        subprocess.run(cmd, check=True)
-        
-        # Read the results
-        with open('results.txt', 'r') as f:
-            result_data = f.read()
-        return jsonify({'result': result_data})
-    except subprocess.CalledProcessError as e:
-        # Check if an error log was generated
-        if os.path.exists('error.log'):
-            with open('error.log', 'r') as f:
-                error_log = f.read()
-            return jsonify({'error': f'Error executing the .exe file: {error_log}'})
-        else:
-            return jsonify({'error': f'Error executing the .exe file: {str(e)}'})
+        # Run the executable with the image path as an argument
+        result = subprocess.run(["Main.exe", image_path], capture_output=True, text=True)
+        if result.returncode != 0:
+            return jsonify({"error": "Error processing image", "details": result.stderr}), 500
+
+        # Process the output from the executable
+        output = result.stdout.strip()
+        return jsonify({"result": output})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 4000))
-    app.run(host='0.0.0.0', port=port)
     app.run(debug=True)
