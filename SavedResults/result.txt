@@ -1,2 +1,4 @@
 Name    /   Cobb Angle  /   Classification 
 temp_image    /   48.94   /   Combined Scoliosis
+N62, Rt TAIS, F, 16 Yrs    /   48.94   /   Combined Scoliosis
+N62, Rt TAIS, F, 16 Yrs    /   48.94   /   Combined Scoliosis

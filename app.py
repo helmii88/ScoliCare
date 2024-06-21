@@ -1,32 +1,62 @@
 from flask import Flask, request, jsonify
 import subprocess
 import os
+import re
 
 app = Flask(__name__)
 
+# Directory to save uploaded images
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-@app.route('/process_image', methods=['POST'])
-def process_image():
-    if 'image' not in request.files:
-        return jsonify({"error": "No image provided"}), 400
 
-    image = request.files['image']
-    image_path = os.path.join("uploads", image.filename)
-    image.save(image_path)
-
+def run_executable(image_path):
     try:
-        # Run the executable with the image path as an argument
-        result = subprocess.run(["Main.exe", image_path], capture_output=True, text=True)
-        if result.returncode != 0:
-            return jsonify({"error": "Error processing image", "details": result.stderr}), 500
+        result = subprocess.run([r'C:\Users\mido\OneDrive\Desktop\git uploads\ScoliCare\Main.exe', image_path], check=True, capture_output=True, text=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        return f"Error: {e.output}"
 
-        # Process the output from the executable
-        output = result.stdout.strip()
-        return jsonify({"result": output})
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+def extract_cobb_angle(result_str):
+    match = re.search(r'Cobb Angle: ([\d.]+)', result_str)
+    if match:
+        return float(match.group(1))
+    return None
+
+
+def extract_classification(result_str):
+    match = re.search(r'Classification: (\w+)', result_str)
+    if match:
+        return match.group(1)
+    return None
+
+
+@app.route('/upload', methods=['POST'])
+def upload_image():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image part in the request"}), 400
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({"error": "No image selected for uploading"}), 400
+    if file:
+        image_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(image_path)
+
+        # Run the executable with the image path
+        result = run_executable(image_path)
+
+        # Extract Cobb angle and classification from the result
+        cobb_angle = extract_cobb_angle(result)
+        classification = extract_classification(result)
+
+        if cobb_angle is None or classification is None:
+            return jsonify({"error": "Failed to extract Cobb angle or classification"}), 500
+
+        return jsonify({"cobb_angle": cobb_angle, "classification": classification})
 
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 4000))
+    app.run(host='0.0.0.0', port=port)
     app.run(debug=True)
