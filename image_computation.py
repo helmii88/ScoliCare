@@ -1,20 +1,21 @@
 import numpy as np
 import math
 import cv2
+
 #function to classify the cobb angle
 def classify(angle,location):
     #angle[0] = top    angle[1] = bot
     angle[0] = abs(angle[0])
     angle[1] = abs(angle[1])
     if angle[1]>10 or angle[0]>10:
-    
+
         if angle[1]>10 and angle[0]>10:
            print("pass")
            if location[1] != location[0]:
                result = "Combined Scoliosis"
            else:
                result = "Thoraco-Lumbar Scoliosis"
-            
+
         else:
             if angle[0]>angle[1]:
                 result = "Thoracic Scoliosis"
@@ -23,12 +24,12 @@ def classify(angle,location):
 
     else:
         result = "No scoliosis"
-        
+
     return result
 
 #func to get the center of the rectangle
 def getCenter(x1,y1,x2,y2):
-    midx = (x1+x2)/2
+    midx = (x1 + x2) / 2
     midy = (y1+y2)/2
     return int(midx), int(midy)
 
@@ -42,7 +43,7 @@ def placelines(x,y,x2,y2,img):
     # returns the min xy and max xy
     #[ymin,xmin,ymax,xmax]
     return [0, int(truncate(np.polyval(function,0))), img.shape[1], int(truncate(np.polyval(function,img.shape[1])))]
-    
+
 #function to get the closest number from the roots
 def getClosest(num,array):
     diff = []
@@ -58,26 +59,26 @@ def truncate(n, decimals=0):
 
 def deriv(f,x):
 
-    h = 0.000000001                 #step-size 
+    h = 0.000000001                 #step-size
     return (f(x+h) - f(x))/h        #definition of derivative
 
 #(function, point, limit1, limit2) gets the tangent of a point in a line
 def tangentLine(f,x_0,a,b):
     x = np.linspace(a,b,200)
-    y = f(x) 
+    y = f(x)
     y_0 = f(x_0)
-    y_tan = deriv(f,x_0) * (x - x_0) + y_0 
+    y_tan = deriv(f,x_0) * (x - x_0) + y_0
   #plotting
     return y_tan,x
 
-#get the slope of a line  
+#get the slope of a line
 def getSlope(x1,y1,x2,y2):
     if (x2-x1) == 0:
         return 0
     else:
         return (y2-y1)/(x2-x1)
 
-def getAngle(s1, s2): 
+def getAngle(s1, s2):
     return math.degrees(math.atan((s2-s1)/(1+(s2*s1))))
 
 #gets the intersection of two lines
@@ -103,13 +104,13 @@ def lineIntersection(xline1,yline1, xline2,yline2):
 def rotatePoints(xc,yc,x,y,w,h,angle,angleLower):
     x0 = ((x - xc) * math.cos(angle)) - ((y - yc) * math.sin(angle)) + xc;
     y0 = ((x - xc) * math.sin(angle)) + ((y - yc) * math.cos(angle)) + yc;
-    
+
     x1 = (((x+w) - xc) * math.cos(angle)) - ((y - yc) * math.sin(angle)) + xc;
     y1 = (((x+w) - xc) * math.sin(angle)) + ((y - yc) * math.cos(angle)) + yc;
-    
+
     x2 = ((x - xc) * math.cos(angleLower)) - (((y+h) - yc) * math.sin(angleLower)) + xc;
     y2 = ((x - xc) * math.sin(angleLower)) + (((y+h) - yc) * math.cos(angleLower)) + yc;
-    
+
     x3 = (((x+w) - xc) * math.cos(angleLower)) - (((y+h) - yc) * math.sin(angleLower)) + xc;
     y3 = (((x+w) - xc) * math.sin(angleLower)) + (((y+h) - yc) * math.cos(angleLower)) + yc;
     return (x0,y0,x1,y1,x2,y2,x3,y3)

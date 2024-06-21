@@ -8,6 +8,7 @@ from image_computation import *
 
 
 def computeCobb(img):
+
 # Load Yolo
     try:
      net = cv2.dnn.readNet( "yolov3_testing.cfg","yolov3_training_last.weights")
@@ -15,7 +16,16 @@ def computeCobb(img):
 # Name custom object
      classes = ["vertebrae"]
      layer_names = net.getLayerNames()
-     output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+     unconnected_layers = net.getUnconnectedOutLayers()
+     print("Unconnected layers:", unconnected_layers)
+
+     output_layers = []
+     for i in unconnected_layers:
+         if isinstance(i, int) and 0 <= i < len(layer_names):
+             output_layers.append(layer_names[i - 1])
+         else:
+             print("Invalid index encountered:", i)
+
      colors = np.random.uniform(0, 255, size=(len(classes), 3))
 
     # Loading image
@@ -34,7 +44,7 @@ def computeCobb(img):
     except Exception:
      traceback.print_exc()
     for out in outs:
-        
+
         for detection in out:
             scores = detection[5:]
             class_id = np.argmax(scores)
@@ -57,7 +67,7 @@ def computeCobb(img):
 
 
     indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
-    
+
     font = cv2.FONT_HERSHEY_PLAIN
     #declare a list for the midpoint coordinates of each detected vertebrae
     midListx=[]
@@ -67,16 +77,16 @@ def computeCobb(img):
     if len(boxes)==0:
         return (None,None)
 
-    
+
     #Get the center of each rectangle
     for i in range(len(boxes)):
         if i in indexes:
             x, y, w, h = boxes[i]
             label = str(classes[class_ids[i]])
-            
+
             color = colors[class_ids[i]]
 
-            #place the rectangle and vertebrae text   
+            #place the rectangle and vertebrae text
             cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
             cv2.putText(img, label, (x, y + 30), font, 3, color, 2)
             #get the center of each rectangle
@@ -87,25 +97,25 @@ def computeCobb(img):
             midListy.append(midy)
             #Draw a dot at the center of each rectangle
             cv2.rectangle(img, (midx,midy) ,(midx+1,midy+1)  , color, 2)
-            
+
             #Coordinates for the box
             boxCoordinates.append([midx,midy,x,y,w,h])
-                 
-   
+
+
     function, points, roots = calculateRoots(midListy, midListx)
 
 
 
     ######################## angle calculation#########################
     try:
-     
+
      #sorts the array based on value of midy
      boxCoordinates = sorted(boxCoordinates, key=lambda x: x[1])
 
      midListySorted= sorted(midListy)
      index = []
      rootsSorted = sorted(roots)
-     
+
      #gets the vertebr
      index.append(getClosest(rootsSorted[0],midListySorted))
      color = (0, 255, 0)
@@ -114,13 +124,13 @@ def computeCobb(img):
      index.append(getClosest(rootsSorted[1],midListySorted)+1)
 
      cv2.rectangle(img, (boxCoordinates[index[1]][0],midListySorted[index[1]]) ,(boxCoordinates[index[1]][0]+1,midListySorted[index[1]]+1)  , color, 2)
-    
+
      if midListySorted[getClosest(rootsSorted[2],midListySorted)]>rootsSorted[2]:
         index.append(getClosest(rootsSorted[2],midListySorted)-1)
      else:
         index.append(getClosest(rootsSorted[2],midListySorted))
      cv2.rectangle(img, (boxCoordinates[index[2]][0],midListySorted[index[2]]) ,(boxCoordinates[index[2]][0]+1,midListySorted[index[2]]+1)  , color, 2)
-     #slope for  
+     #slope for
      slope = []
      angle = []
 
@@ -136,7 +146,7 @@ def computeCobb(img):
      ylineCoor = []
      for i in range(len(boxCoordinates)):
      #coorCenter.append([midx,midy,x,y,w,h])
-         
+
           #Gets the slope of the middle point of the first and second
          if i==0:
             slope.append(getSlope(boxCoordinates[i][0],boxCoordinates[i][1],boxCoordinates[i+1][0],boxCoordinates[i+1][1]))
@@ -145,7 +155,7 @@ def computeCobb(img):
             slope.append(getSlope(boxCoordinates[i][0],boxCoordinates[i][1],boxCoordinates[i-1][0],boxCoordinates[i-1][1]))
          else:
             slope.append(getSlope(boxCoordinates[i-1][0],boxCoordinates[i-1][1],boxCoordinates[i+1][0],boxCoordinates[i+1][1]))
-         
+
          #obtained the coordinate and slope at the computed indexes
          if (ctr!=3) and (index[ctr] == i) :
 
@@ -162,23 +172,23 @@ def computeCobb(img):
                 ctr = ctr+1
             else:
                 slopeTan.append(slope[i])
-             #get the intesection of two tangent lines 
+             #get the intesection of two tangent lines
                 xlineCoor.append(np.linspace(tanLinCoor[ctr][0], tanLinCoor[ctr][2], 100))
                 ylineCoor.append(np.linspace(tanLinCoor[ctr][1], tanLinCoor[ctr][3], 100))
                 ctr = ctr+1
 
-         #to compare where the angle is positive, zero or negative    
+         #to compare where the angle is positive, zero or negative
          if getAngle(0,slope[i])>0:
             angle.append(90-getAngle(0,slope[i]))
          elif getAngle(0,slope[i])==0:
-            angle.append(0)             
+            angle.append(0)
          else:
             angle.append(-(getAngle(0,slope[i])+90))
-         
+
          #places the function into the imgResult
          if i != (len(boxCoordinates)-1):
             cv2.line(imgResult,(boxCoordinates[i][0],boxCoordinates[i][1]),(boxCoordinates[i+1][0],boxCoordinates[i+1][1]),(0,0,255),3)
-         
+
          #rotatePoints(xc,yc,x,y,w,h,angle,angleLower)
          coorRotated.append( rotatePoints(boxCoordinates[i][0],boxCoordinates[i][1],
                                 boxCoordinates[i][2],boxCoordinates[i][3],
@@ -189,14 +199,14 @@ def computeCobb(img):
          cv2.line(imgResult,(int(truncate(coorRotated[i][4])),int(truncate(coorRotated[i][5]))),(int(truncate(coorRotated[i][6])),int(truncate(coorRotated[i][7]))),(0,255,0),1)
          cv2.line(imgResult,(int(truncate(coorRotated[i][0])),int(truncate(coorRotated[i][1]))),(int(truncate(coorRotated[i][4])),int(truncate(coorRotated[i][5]))),(0,255,0),1)
          cv2.line(imgResult,(int(truncate(coorRotated[i][2])),int(truncate(coorRotated[i][3]))),(int(truncate(coorRotated[i][6])),int(truncate(coorRotated[i][7]))),(0,255,0),1)
-     
+
      #contains the coordinates for the intersections of tangent lines
      tanInter = []
- 
+
      for i in range(len(xlineCoor)-1):
         tanInter.append(lineIntersection(xlineCoor[i],ylineCoor[i],xlineCoor[1+i],ylineCoor[1+i]))
 
-     
+
      #contains the location of the intersection whether left or right
      location = []
 
@@ -209,7 +219,7 @@ def computeCobb(img):
     #contains the angle of the tangent lines which is equal to the cobb angle
      for i in range(len(slopeTan)-1):
         angleTan.append(getAngle(slopeTan[i],slopeTan[1+i]))
-     #places the angle into the image 
+     #places the angle into the image
         cv2.putText(imgResult, str(truncate(abs(angleTan[i]),2)), (int(tanInter[i][0]),int(tanInter[i][1])), font, 3, (0,0,255), 2)
     #for cases where only one angle is computed
      if len(angleTan) == 1 :
@@ -227,7 +237,7 @@ def computeCobb(img):
     fig, (ax1,ax2,ax3) = plt.subplots(1,3,sharex=True, sharey=True, figsize=(10,10))
     #shows the detected vertebrea
     ax1.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    
+
     #makes ax2 size equal to ax1 and ax3
     ax2 .set_aspect('equal')
     ax2.axis([0,img.shape[1] , img.shape[0],0])

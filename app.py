@@ -1,62 +1,40 @@
 from flask import Flask, request, jsonify
-import subprocess
+import cv2
 import os
-import re
+from YOLO import computeCobb  # Assuming computeCobb is defined in YOLO.py
 
 app = Flask(__name__)
 
-# Directory to save uploaded images
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-
-def run_executable(image_path):
+@app.route('/compute-cobb', methods=['POST'])
+def compute_cobb_api():
     try:
-        result = subprocess.run([r'C:\Users\mido\OneDrive\Desktop\git uploads\ScoliCare\Main.exe', image_path], check=True, capture_output=True, text=True)
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        return f"Error: {e.output}"
+        file = request.files['image']
+        if file:
+            # Save the uploaded image temporarily
+            image_path = 'temp_image.jpg'
+            file.save(image_path)
 
+            # Read the uploaded image using OpenCV
+            image = cv2.imread(image_path)
+            cobb_up, cobb_low, img_cobb, result = computeCobb(image)
 
-def extract_cobb_angle(result_str):
-    match = re.search(r'Cobb Angle: ([\d.]+)', result_str)
-    if match:
-        return float(match.group(1))
-    return None
+            # Remove the temporary image file
+            os.remove(image_path)
 
+            if (cobb_up or cobb_low) is None:
+                return jsonify({'error': 'No vertebrae detected or wrong image'})
 
-def extract_classification(result_str):
-    match = re.search(r'Classification: (\w+)', result_str)
-    if match:
-        return match.group(1)
-    return None
+            if abs(cobb_up) > abs(cobb_low):
+                cobb_angle = abs(cobb_up)
+            else:
+                cobb_angle = abs(cobb_low)
 
-
-@app.route('/upload', methods=['POST'])
-def upload_image():
-    if 'image' not in request.files:
-        return jsonify({"error": "No image part in the request"}), 400
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({"error": "No image selected for uploading"}), 400
-    if file:
-        image_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(image_path)
-
-        # Run the executable with the image path
-        result = run_executable(image_path)
-
-        # Extract Cobb angle and classification from the result
-        cobb_angle = extract_cobb_angle(result)
-        classification = extract_classification(result)
-
-        if cobb_angle is None or classification is None:
-            return jsonify({"error": "Failed to extract Cobb angle or classification"}), 500
-
-        return jsonify({"cobb_angle": cobb_angle, "classification": classification})
-
+            # Return the results as JSON
+            return jsonify({'cobb_angle': cobb_angle, 'classification': result})
+        else:
+            return jsonify({'error': 'No image uploaded'})
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 4000))
-    app.run(host='0.0.0.0', port=port)
     app.run(debug=True)
